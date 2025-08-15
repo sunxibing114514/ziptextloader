@@ -1,681 +1,230 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
+    <title>Zip 文件内容搜索 (Zip File Content Search)</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZIP文件内容搜索工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
         body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-            color: #333;
-            min-height: 100vh;
-            padding: 20px;
+            font-family: sans-serif;
+            margin: 2em;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            color: white;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            max-width: 800px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            padding: 30px;
-            margin-bottom: 30px;
-            transition: transform 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .card-title {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #1a2a6c;
-            display: flex;
-            align-items: center;
-        }
-        
-        .card-title i {
-            margin-right: 10px;
-            font-size: 1.8rem;
-        }
-        
-        .upload-area {
-            border: 3px dashed #4a69bd;
-            border-radius: 10px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9fa;
-            position: relative;
-        }
-        
-        .upload-area:hover, .upload-area.dragover {
-            background: #e3f2fd;
-            border-color: #1a2a6c;
-        }
-        
-        .upload-icon {
-            font-size: 4rem;
-            color: #4a69bd;
-            margin-bottom: 15px;
-        }
-        
-        .upload-text {
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-        }
-        
-        .btn {
-            background: #1a2a6c;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn:hover {
-            background: #0d1b4d;
-            transform: translateY(-2px);
-        }
-        
-        .btn i {
-            margin-right: 8px;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-        
-        .search-area {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .search-input {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: #1a2a6c;
-        }
-        
-        .search-options {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-        }
-        
-        .file-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 15px;
-        }
-        
-        .file-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
-        }
-        
-        .file-item:last-child {
-            border-bottom: none;
-        }
-        
-        .file-icon {
-            margin-right: 10px;
-            color: #4a69bd;
-        }
-        
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        
-        .results-table th {
-            background: #1a2a6c;
-            color: white;
-            text-align: left;
-            padding: 15px;
-        }
-        
-        .results-table td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        
-        .results-table tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        
-        .results-table tr:hover {
-            background-color: #e3f2fd;
-        }
-        
-        .match-text {
-            background: #fff9c4;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-        
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            font-size: 0.9rem;
-            color: #666;
-        }
-        
-        .file-preview {
-            max-height: 300px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-        
-        .highlight {
-            background-color: #fff9c4;
-            font-weight: bold;
-        }
-        
-        .section {
-            margin-bottom: 20px;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .error {
-            color: #e53935;
-            padding: 10px;
-            background: #ffebee;
-            border-radius: 6px;
-            margin: 15px 0;
-        }
-        
-        @media (max-width: 768px) {
-            .search-area {
-                flex-direction: column;
-            }
-            
-            .card {
-                padding: 20px;
-            }
+        input[type="file"], input[type="text"], button {
+            margin-bottom: 1em;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>ZIP文件内容搜索工具</h1>
-            <p class="subtitle">上传ZIP压缩包，搜索其中的文本内容（支持.txt, .js, .json, .html, .css, .xml, .md等文本文件）</p>
-        </header>
-        
-        <div class="card">
-            <h2 class="card-title">
-                <i>📁</i> 第一步：上传ZIP文件
-            </h2>
-            <div class="upload-area" id="dropZone">
-                <div class="upload-icon">📤</div>
-                <p class="upload-text">拖放ZIP文件到此处，或</p>
-                <input type="file" id="fileInput" accept=".zip" style="display: none;">
-                <button class="btn" id="browseBtn">
-                    <i>📂</i> 选择ZIP文件
-                </button>
-                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">最大支持50MB的ZIP文件</p>
-            </div>
-            
-            <div id="fileInfo" class="hidden">
-                <div class="status-bar">
-                    <span id="fileName">未选择文件</span>
-                    <span id="fileSize">-</span>
-                </div>
-                
-                <div class="section">
-                    <h3>包含的文件：</h3>
-                    <div class="file-list" id="fileList">
-                        <!-- 文件列表将通过JS动态生成 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card hidden" id="searchCard">
-            <h2 class="card-title">
-                <i>🔍</i> 第二步：搜索内容
-            </h2>
-            
-            <div class="search-area">
-                <input type="text" class="search-input" id="searchInput" placeholder="输入要搜索的内容...">
-                <button class="btn" id="searchBtn">
-                    <i>🔍</i> 搜索
-                </button>
-            </div>
-            
-            <div class="search-options">
-                <div class="checkbox-container">
-                    <input type="checkbox" id="caseSensitive">
-                    <label for="caseSensitive">区分大小写</label>
-                </div>
-            </div>
-            
-            <div class="status-bar">
-                <span id="resultStats">等待搜索...</span>
-            </div>
-            
-            <div class="section">
-                <h3>搜索结果：</h3>
-                <div id="searchResults">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th width="30%">文件名</th>
-                                <th width="70%">匹配内容</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsBody">
-                            <!-- 搜索结果将通过JS动态生成 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card hidden" id="previewCard">
-            <h2 class="card-title">
-                <i>📄</i> 文件预览
-            </h2>
-            <div class="file-preview" id="filePreview">
-                <!-- 文件预览内容将通过JS动态生成 -->
-            </div>
-        </div>
-    </div>
+
+    <h1>在 Zip 文件中搜索文本 (Search for Text in a Zip File)</h1>
+    <p>上传一个 zip 文件，然后输入您想要查找的内容。(Upload a zip file and enter the content you want to search for.)</p>
+
+    <input type="file" id="zipFile" accept=".zip">
+    <br>
+    <input type="text" id="searchText" placeholder="输入搜索内容 (Enter search text)">
+    <br>
+    <button onclick="searchInZip()">搜索 (Search)</button>
+
+    <h2>搜索结果 (Search Results):</h2>
+    <div id="results"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 获取DOM元素
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            const browseBtn = document.getElementById('browseBtn');
-            const fileInfo = document.getElementById('fileInfo');
-            const fileName = document.getElementById('fileName');
-            const fileSize = document.getElementById('fileSize');
-            const fileList = document.getElementById('fileList');
-            const searchCard = document.getElementById('searchCard');
-            const searchInput = document.getElementById('searchInput');
-            const searchBtn = document.getElementById('searchBtn');
-            const caseSensitive = document.getElementById('caseSensitive');
-            const resultStats = document.getElementById('resultStats');
-            const resultsBody = document.getElementById('resultsBody');
-            const previewCard = document.getElementById('previewCard');
-            const filePreview = document.getElementById('filePreview');
-            
-            // 全局变量
-            let zip = null;
-            let textFiles = [];
-            let searchResults = [];
-            
-            // 修复：点击浏览按钮触发文件选择
-            browseBtn.addEventListener('click', function() {
-                fileInput.click();
-            });
-            
-            // 处理文件选择
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            // 拖放事件处理
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-            
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    handleFileSelect(e);
-                }
-            });
-            
-            // 搜索按钮点击事件
-            searchBtn.addEventListener('click', performSearch);
-            
-            // 回车键触发搜索
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    performSearch();
-                }
-            });
-            
-            // 处理文件选择
-            function handleFileSelect(e) {
-                const file = e.target.files[0] || (e.dataTransfer && e.dataTransfer.files[0]);
-                
-                if (!file) return;
-                
-                // 检查文件类型
-                if (!file.name.toLowerCase().endsWith('.zip')) {
-                    showError('请选择ZIP格式的文件');
-                    return;
-                }
-                
-                // 检查文件大小 (限制50MB)
-                if (file.size > 50 * 1024 * 1024) {
-                    showError('文件大小超过50MB限制');
-                    return;
-                }
-                
-                // 显示文件信息
-                fileName.textContent = file.name;
-                fileSize.textContent = formatFileSize(file.size);
-                fileInfo.classList.remove('hidden');
-                
-                // 加载并解析ZIP文件
-                loadZipFile(file);
+        async function searchInZip() {
+            const zipFileInput = document.getElementById('zipFile');
+            const searchText = document.getElementById('searchText').value;
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = '';
+
+            if (zipFileInput.files.length === 0) {
+                alert('请选择一个 zip 文件。(Please select a zip file.)');
+                return;
             }
+
+            if (searchText.trim() === '') {
+                alert('请输入要搜索的内容。(Please enter the text to search for.)');
+                return;
+            }
+
+            const file = zipFileInput.files[0];
             
-            // 加载ZIP文件
-            function loadZipFile(file) {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    JSZip.loadAsync(e.target.result)
-                        .then(zipData => {
-                            zip = zipData;
-                            textFiles = [];
-                            
-                            // 清空文件列表
-                            fileList.innerHTML = '';
-                            
-                            // 遍历ZIP中的文件
-                            let textFileCount = 0;
-                            let totalFiles = 0;
-                            
-                            zip.forEach((relativePath, fileEntry) => {
-                                if (!fileEntry.dir) {
-                                    totalFiles++;
-                                    const extension = relativePath.split('.').pop().toLowerCase();
-                                    const textExtensions = ['txt', 'js', 'json', 'html', 'css', 'xml', 'md', 'log', 'ini', 'conf', 'py', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'sh', 'bat', 'yml', 'yaml'];
-                                    
-                                    if (textExtensions.includes(extension)) {
-                                        textFileCount++;
-                                        
-                                        // 添加到文件列表
-                                        const fileItem = document.createElement('div');
-                                        fileItem.className = 'file-item';
-                                        fileItem.innerHTML = `
-                                            <span class="file-icon">📄</span>
-                                            ${relativePath}
-                                        `;
-                                        fileList.appendChild(fileItem);
-                                        
-                                        // 存储文件信息
-                                        textFiles.push({
-                                            name: relativePath,
-                                            extension: extension
-                                        });
-                                    }
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                try {
+                    const zip = await JSZip.loadAsync(event.target.result);
+                    const foundFiles = [];
+                    const textExtensions = ['txt', 'js', 'json', 'html', 'css', 'xml', 'csv', 'md', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'kts', 'groovy', 'lua', 'pl', 'sh', 'bat', 'sql', 'yaml', 'toml'];
+                    const promises = [];
+
+                    zip.forEach((relativePath, zipEntry) => {
+                        const fileName = zipEntry.name;
+                        const fileExtension = fileName.split('.').pop().toLowerCase();
+
+                        if (!zipEntry.dir && textExtensions.includes(fileExtension)) {
+                            const promise = zipEntry.async('string').then(content => {
+                                if (content.includes(searchText)) {
+                                    foundFiles.push(fileName);
                                 }
                             });
-                            
-                            // 显示搜索区域
-                            searchCard.classList.remove('hidden');
-                            resultStats.textContent = `ZIP文件中包含 ${totalFiles} 个文件，其中 ${textFileCount} 个文本文件`;
-                        })
-                        .catch(error => {
-                            showError('解析ZIP文件失败: ' + error.message);
+                            promises.push(promise);
+                        }
+                    });
+
+                    await Promise.all(promises);
+
+                    if (foundFiles.length > 0) {
+                        const ul = document.createElement('ul');
+                        foundFiles.forEach(fileName => {
+                            const li = document.createElement('li');
+                            li.textContent = fileName;
+                            ul.appendChild(li);
                         });
-                };
-                
-                reader.onerror = function() {
-                    showError('读取文件失败');
-                };
-                
-                reader.readAsArrayBuffer(file);
-            }
-            
-            // 执行搜索
-            function performSearch() {
-                const searchTerm = searchInput.value.trim();
-                
-                if (!searchTerm) {
-                    showError('请输入搜索内容');
-                    return;
+                        resultsDiv.appendChild(ul);
+                    } else {
+                        resultsDiv.innerHTML = '<p>在任何文本文件中都未找到该内容。(The content was not found in any text files.)</p>';
+                    }
+                } catch (e) {
+                    alert('解析 zip 文件时出错。(An error occurred while parsing the zip file.)');
+                    console.error(e);
                 }
-                
-                if (!zip || textFiles.length === 0) {
-                    showError('请先上传有效的ZIP文件');
-                    return;
-                }
-                
-                // 清空之前的搜索结果
-                resultsBody.innerHTML = '';
-                previewCard.classList.add('hidden');
-                resultStats.textContent = '搜索中...';
-                searchBtn.disabled = true;
-                searchBtn.textContent = '搜索中...';
-                
-                // 准备搜索选项
-                const caseSensitiveFlag = caseSensitive.checked;
-                const searchRegex = new RegExp(
-                    searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
-                    caseSensitiveFlag ? 'g' : 'gi'
-                );
-                
-                searchResults = [];
-                let filesProcessed = 0;
-                
-                // 遍历所有文本文件进行搜索
-                textFiles.forEach(fileInfo => {
-                    zip.file(fileInfo.name).async('string')
-                        .then(content => {
-                            const lines = content.split('\n');
-                            let matchFound = false;
-                            let matches = [];
-                            
-                            // 检查每一行是否包含搜索内容
-                            lines.forEach((line, index) => {
-                                const lineMatches = line.match(searchRegex);
-                                if (lineMatches) {
-                                    matchFound = true;
-                                    
-                                    // 高亮显示匹配文本
-                                    const highlightedLine = line.replace(
-                                        searchRegex, 
-                                        '<span class="match-text">$&</span>'
-                                    );
-                                    
-                                    matches.push({
-                                        lineNumber: index + 1,
-                                        content: highlightedLine
-                                    });
-                                }
-                            });
-                            
-                            if (matchFound) {
-                                searchResults.push({
-                                    fileName: fileInfo.name,
-                                    matches: matches
-                                });
-                                
-                                // 添加到结果表格
-                                const resultRow = document.createElement('tr');
-                                
-                                // 显示前3个匹配内容
-                                let matchContent = '';
-                                for (let i = 0; i < Math.min(3, matches.length); i++) {
-                                    matchContent += `<div>行 ${matches[i].lineNumber}: ${matches[i].content}</div>`;
-                                }
-                                if (matches.length > 3) {
-                                    matchContent += `<div>... 以及另外 ${matches.length - 3} 处匹配</div>`;
-                                }
-                                
-                                resultRow.innerHTML = `
-                                    <td>${fileInfo.name}</td>
-                                    <td>${matchContent}</td>
-                                `;
-                                
-                                // 点击行显示文件预览
-                                resultRow.addEventListener('click', () => {
-                                    showFilePreview(fileInfo.name, content, searchRegex);
-                                });
-                                
-                                resultsBody.appendChild(resultRow);
-                            }
-                            
-                            // 更新进度
-                            filesProcessed++;
-                            resultStats.textContent = `搜索中... ${filesProcessed}/${textFiles.length} 文件已处理`;
-                            
-                            if (filesProcessed === textFiles.length) {
-                                updateResultStats();
-                                searchBtn.disabled = false;
-                                searchBtn.textContent = '🔍 搜索';
-                            }
-                        })
-                        .catch(error => {
-                            console.error(`读取文件 ${fileInfo.name} 失败:`, error);
-                            filesProcessed++;
-                            if (filesProcessed === textFiles.length) {
-                                updateResultStats();
-                                searchBtn.disabled = false;
-                                searchBtn.textContent = '🔍 搜索';
-                            }
-                        });
-                });
-            }
-            
-            // 更新搜索结果统计信息
-            function updateResultStats() {
-                const fileCount = searchResults.length;
-                const matchCount = searchResults.reduce((count, file) => count + file.matches.length, 0);
-                
-                if (fileCount === 0) {
-                    resultStats.textContent = `没有找到匹配的内容`;
-                    resultsBody.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px;">没有找到匹配的内容</td></tr>`;
-                } else {
-                    resultStats.textContent = `搜索完成！在 ${fileCount} 个文件中找到 ${matchCount} 处匹配`;
-                }
-            }
-            
-            // 显示文件预览
-            function showFilePreview(fileName, content, searchRegex) {
-                // 高亮显示所有匹配项
-                const highlightedContent = content.replace(
-                    searchRegex, 
-                    '<span class="highlight">$&</span>'
-                );
-                
-                filePreview.innerHTML = `<h4>${fileName}</h4><pre>${highlightedContent}</pre>`;
-                previewCard.classList.remove('hidden');
-                
-                // 滚动到预览区域
-                previewCard.scrollIntoView({ behavior: 'smooth' });
-            }
-            
-            // 显示错误信息
-            function showError(message) {
-                // 移除之前的错误信息
-                const existingError = document.querySelector('.error');
-                if (existingError) existingError.remove();
-                
-                const errorElement = document.createElement('div');
-                errorElement.className = 'error';
-                errorElement.textContent = message;
-                
-                // 添加到文件信息区域
-                fileInfo.parentNode.insertBefore(errorElement, fileInfo);
-                
-                // 3秒后移除错误信息
-                setTimeout(() => {
-                    errorElement.remove();
-                }, 3000);
-            }
-            
-            // 格式化文件大小
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
-            }
-        });
+            };
+            reader.readAsArrayBuffer(file);
+        }
     </script>
+
+</body>
+</html>
+```<!DOCTYPE html>
+<html>
+<head>
+    <title>Zip 文件内容搜索 (Zip File Content Search)</title>
+    <meta charset="UTF-8">
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js](https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js)"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            margin: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1, h2 {
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: .3em;
+        }
+        input[type="file"], input[type="text"], button {
+            display: block;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #d1d5da;
+        }
+        button {
+            background-color: #2ea44f;
+            color: white;
+            border: 1px solid rgba(27, 31, 35, .15);
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2c974b;
+        }
+        #results ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #results li {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>在 Zip 文件中搜索文本 (Search for Text in a Zip File)</h1>
+    <p>上传一个 zip 文件，然后输入您想要查找的内容。(Upload a zip file and enter the content you want to search for.)</p>
+
+    <input type="file" id="zipFile" accept=".zip">
+    <input type="text" id="searchText" placeholder="输入搜索内容 (Enter search text)" style="width: 300px;">
+    <button onclick="searchInZip()">搜索 (Search)</button>
+
+    <h2>搜索结果 (Search Results):</h2>
+    <div id="results"></div>
+
+    <script>
+        async function searchInZip() {
+            const zipFileInput = document.getElementById('zipFile');
+            const searchText = document.getElementById('searchText').value;
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = '正在搜索... (Searching...)';
+
+            if (zipFileInput.files.length === 0) {
+                alert('请选择一个 zip 文件。(Please select a zip file.)');
+                resultsDiv.innerHTML = '';
+                return;
+            }
+
+            if (searchText.trim() === '') {
+                alert('请输入要搜索的内容。(Please enter the text to search for.)');
+                resultsDiv.innerHTML = '';
+                return;
+            }
+
+            const file = zipFileInput.files[0];
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                try {
+                    const zip = await JSZip.loadAsync(event.target.result);
+                    const foundFiles = [];
+                    // 定义常见的文本文件扩展名
+                    const textExtensions = ['txt', 'js', 'json', 'html', 'css', 'xml', 'csv', 'md', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'kts', 'groovy', 'lua', 'pl', 'sh', 'bat', 'sql', 'yaml', 'toml', 'ini', 'log'];
+                    const promises = [];
+
+                    zip.forEach((relativePath, zipEntry) => {
+                        const fileName = zipEntry.name;
+                        const fileExtension = fileName.split('.').pop().toLowerCase();
+
+                        if (!zipEntry.dir && textExtensions.includes(fileExtension)) {
+                            const promise = zipEntry.async('string').then(content => {
+                                if (content.includes(searchText)) {
+                                    foundFiles.push(fileName);
+                                }
+                            }).catch(err => {
+                                console.error(`无法读取文件 ${fileName} 的内容。(Could not read content of file ${fileName})`, err);
+                            });
+                            promises.push(promise);
+                        }
+                    });
+
+                    await Promise.all(promises);
+
+                    resultsDiv.innerHTML = '';
+
+                    if (foundFiles.length > 0) {
+                        const ul = document.createElement('ul');
+                        foundFiles.forEach(fileName => {
+                            const li = document.createElement('li');
+                            li.textContent = fileName;
+                            ul.appendChild(li);
+                        });
+                        resultsDiv.appendChild(ul);
+                    } else {
+                        resultsDiv.innerHTML = '<p>在任何文本文件中都未找到该内容。(The content was not found in any text files.)</p>';
+                    }
+                } catch (e) {
+                    alert('解析 zip 文件时出错。请确保这是一个有效的 zip 文件。(An error occurred while parsing the zip file. Please ensure it is a valid zip file.)');
+                    resultsDiv.innerHTML = '';
+                    console.error(e);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+
 </body>
 </html>
