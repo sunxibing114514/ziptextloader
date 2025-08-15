@@ -80,6 +80,7 @@
             cursor: pointer;
             transition: all 0.3s;
             background: #f8f9fa;
+            position: relative;
         }
         
         .upload-area:hover, .upload-area.dragover {
@@ -201,6 +202,7 @@
         .results-table td {
             padding: 15px;
             border-bottom: 1px solid #eee;
+            cursor: pointer;
         }
         
         .results-table tr:nth-child(even) {
@@ -283,7 +285,7 @@
             <div class="upload-area" id="dropZone">
                 <div class="upload-icon">📤</div>
                 <p class="upload-text">拖放ZIP文件到此处，或</p>
-                <input type="file" id="fileInput" accept=".zip" hidden>
+                <input type="file" id="fileInput" accept=".zip" style="display: none;">
                 <button class="btn" id="browseBtn">
                     <i>📂</i> 选择ZIP文件
                 </button>
@@ -380,8 +382,10 @@
             let textFiles = [];
             let searchResults = [];
             
-            // 点击浏览按钮触发文件选择
-            browseBtn.addEventListener('click', () => fileInput.click());
+            // 修复：点击浏览按钮触发文件选择
+            browseBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
             
             // 处理文件选择
             fileInput.addEventListener('change', handleFileSelect);
@@ -428,6 +432,12 @@
                     return;
                 }
                 
+                // 检查文件大小 (限制50MB)
+                if (file.size > 50 * 1024 * 1024) {
+                    showError('文件大小超过50MB限制');
+                    return;
+                }
+                
                 // 显示文件信息
                 fileName.textContent = file.name;
                 fileSize.textContent = formatFileSize(file.size);
@@ -452,8 +462,11 @@
                             
                             // 遍历ZIP中的文件
                             let textFileCount = 0;
+                            let totalFiles = 0;
+                            
                             zip.forEach((relativePath, fileEntry) => {
                                 if (!fileEntry.dir) {
+                                    totalFiles++;
                                     const extension = relativePath.split('.').pop().toLowerCase();
                                     const textExtensions = ['txt', 'js', 'json', 'html', 'css', 'xml', 'md', 'log', 'ini', 'conf', 'py', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'sh', 'bat', 'yml', 'yaml'];
                                     
@@ -480,11 +493,15 @@
                             
                             // 显示搜索区域
                             searchCard.classList.remove('hidden');
-                            resultStats.textContent = `ZIP文件中包含 ${textFileCount} 个文本文件`;
+                            resultStats.textContent = `ZIP文件中包含 ${totalFiles} 个文件，其中 ${textFileCount} 个文本文件`;
                         })
                         .catch(error => {
                             showError('解析ZIP文件失败: ' + error.message);
                         });
+                };
+                
+                reader.onerror = function() {
+                    showError('读取文件失败');
                 };
                 
                 reader.readAsArrayBuffer(file);
@@ -508,6 +525,8 @@
                 resultsBody.innerHTML = '';
                 previewCard.classList.add('hidden');
                 resultStats.textContent = '搜索中...';
+                searchBtn.disabled = true;
+                searchBtn.textContent = '搜索中...';
                 
                 // 准备搜索选项
                 const caseSensitiveFlag = caseSensitive.checked;
@@ -554,9 +573,19 @@
                                 
                                 // 添加到结果表格
                                 const resultRow = document.createElement('tr');
+                                
+                                // 显示前3个匹配内容
+                                let matchContent = '';
+                                for (let i = 0; i < Math.min(3, matches.length); i++) {
+                                    matchContent += `<div>行 ${matches[i].lineNumber}: ${matches[i].content}</div>`;
+                                }
+                                if (matches.length > 3) {
+                                    matchContent += `<div>... 以及另外 ${matches.length - 3} 处匹配</div>`;
+                                }
+                                
                                 resultRow.innerHTML = `
                                     <td>${fileInfo.name}</td>
-                                    <td>${matches.length} 处匹配</td>
+                                    <td>${matchContent}</td>
                                 `;
                                 
                                 // 点击行显示文件预览
@@ -569,8 +598,12 @@
                             
                             // 更新进度
                             filesProcessed++;
+                            resultStats.textContent = `搜索中... ${filesProcessed}/${textFiles.length} 文件已处理`;
+                            
                             if (filesProcessed === textFiles.length) {
                                 updateResultStats();
+                                searchBtn.disabled = false;
+                                searchBtn.textContent = '🔍 搜索';
                             }
                         })
                         .catch(error => {
@@ -578,6 +611,8 @@
                             filesProcessed++;
                             if (filesProcessed === textFiles.length) {
                                 updateResultStats();
+                                searchBtn.disabled = false;
+                                searchBtn.textContent = '🔍 搜索';
                             }
                         });
                 });
@@ -588,7 +623,12 @@
                 const fileCount = searchResults.length;
                 const matchCount = searchResults.reduce((count, file) => count + file.matches.length, 0);
                 
-                resultStats.textContent = `搜索完成！在 ${fileCount} 个文件中找到 ${matchCount} 处匹配`;
+                if (fileCount === 0) {
+                    resultStats.textContent = `没有找到匹配的内容`;
+                    resultsBody.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px;">没有找到匹配的内容</td></tr>`;
+                } else {
+                    resultStats.textContent = `搜索完成！在 ${fileCount} 个文件中找到 ${matchCount} 处匹配`;
+                }
             }
             
             // 显示文件预览
@@ -599,7 +639,7 @@
                     '<span class="highlight">$&</span>'
                 );
                 
-                filePreview.innerHTML = `<h4>${fileName}</h4><div>${highlightedContent}</div>`;
+                filePreview.innerHTML = `<h4>${fileName}</h4><pre>${highlightedContent}</pre>`;
                 previewCard.classList.remove('hidden');
                 
                 // 滚动到预览区域
@@ -608,6 +648,10 @@
             
             // 显示错误信息
             function showError(message) {
+                // 移除之前的错误信息
+                const existingError = document.querySelector('.error');
+                if (existingError) existingError.remove();
+                
                 const errorElement = document.createElement('div');
                 errorElement.className = 'error';
                 errorElement.textContent = message;
